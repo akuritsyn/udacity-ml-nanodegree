@@ -13,7 +13,8 @@ from trainer import Trainer
 model_1 = smp.Unet("resnet34", encoder_weights="imagenet", activation=None)
 
 size=1024 #512
-fold=1
+fold=3
+gpu="cuda:1"
 
 input_model_file="model_512_{}.pth".format(fold)
 old_model_1=torch.load(input_model_file)
@@ -28,5 +29,5 @@ bs=4 #16
 acc_steps=4 #32//bs
 
 # data
-model_trainer_1 = Trainer(model_1, epochs, lr, acc_steps, optimizer, scheduler, criterion, fold, size, bs)
+model_trainer_1 = Trainer(model_1, epochs, lr, acc_steps, optimizer, scheduler, criterion, fold, size, bs,gpu=gpu)
 model_trainer_1.start()

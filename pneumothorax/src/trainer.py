@@ -22,7 +22,7 @@ test_data_folder = input_dir_path+"test"
 
 class Trainer(object):
     '''This class takes care of training and validation of our model'''
-    def __init__(self, model, epochs, lr, acc_steps, optimizer, scheduler, criterion, fold, size, batch_sz):
+    def __init__(self, model, epochs, lr, acc_steps, optimizer, scheduler, criterion, fold, size, batch_sz,gpu="cuda:0"):
         self.num_workers = 4 #1
         self.fold = fold
         self.size = size
@@ -32,7 +32,7 @@ class Trainer(object):
         self.batch_size = {"train": batch_sz, "val": 2}
         self.best_loss = float("inf")
         self.phases = ["train", "val"]
-        self.device = torch.device("cuda:1")
+        self.device = torch.device(gpu)
         torch.set_default_tensor_type("torch.cuda.FloatTensor")
         self.net = model
         self.criterion = criterion
@@ -112,5 +112,5 @@ class Trainer(object):
             if val_loss < self.best_loss:
                 print("******** New optimal found, saving state ********")
                 state["best_loss"] = self.best_loss = val_loss
-                torch.save(state, "model_1024_{}.pth".format(self.fold))
+                torch.save(state, "model_{}_{}.pth".format(self.size,self.fold))
             print()
