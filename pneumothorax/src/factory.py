@@ -17,6 +17,7 @@ from .mixed_loss import MixedLoss
 from .metrics import Meter
 from .metrics import epoch_log
 from .dataset import provider
+from .utils.logger import log
 
 # ---> Need to fix paths
 #input_dir_path='../input/1024-s2/'
@@ -27,27 +28,30 @@ from .dataset import provider
 
 
 def get_model(cfg):
-    #log(f'model: {cfg.model.name}')
-    #log(f'pretrained: {cfg.model.pretrained}')
+    log(f'model: {cfg.model.name}')
+    log(f'pretrained: {cfg.model.pretrained}')
     if cfg.model.name=='unet_resnet34':
         model = smp.Unet("resnet34", encoder_weights="imagenet", activation=None)
-        return model
+
+    return model
 
 
 def get_optim(cfg, parameters):
     optim = getattr(torch.optim, cfg.optim.name)(parameters, **cfg.optim.params)
-    #log(f'optim: {cfg.optim.name}')
+    log(f'optim: {cfg.optim.name}')
     return optim
 
 
 def get_loss(cfg):
-    #log('loss: %s' % cfg.loss.name)
-    if cfg.loss.name=='MixedLoss':
-        criterion=MixedLoss(cfg.loss.params.alpha, cfg.loss.params.gamma)
-        return criterion
+    log('loss: %s' % cfg.loss.name)
 
-    # loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
-    # return loss  
+    if cfg.loss.name=='MixedLoss':
+        loss = MixedLoss(cfg.loss.params.alpha, cfg.loss.params.gamma)
+        log(f'alpha: {cfg.loss.params.alpha}, gamma: {cfg.loss.params.gamma}')
+    else:
+        loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
+    
+    return loss  
 
 
 def get_scheduler(cfg, optim, last_epoch):
@@ -57,15 +61,15 @@ def get_scheduler(cfg, optim, last_epoch):
             **cfg.scheduler.params,
         )
         scheduler.last_epoch = last_epoch
-        return scheduler
-    #else:
-        # scheduler = getattr(lr_scheduler, cfg.scheduler.name)(
-        #     optim,
-        #     last_epoch=last_epoch,
-        #     **cfg.scheduler.params,
-        # )
-    #log(f'last_epoch: {last_epoch}')
-    #return scheduler
+    else:
+        scheduler = getattr(lr_scheduler, cfg.scheduler.name)(
+            optim,
+            last_epoch=last_epoch,
+            **cfg.scheduler.params,
+        )
+
+    log(f'last_epoch: {last_epoch}')
+    return scheduler
 
 
 class Trainer(object):

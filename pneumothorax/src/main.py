@@ -1,5 +1,6 @@
 import argparse
 from .utils.config import Config
+from .utils.logger import logger, log
 
 import torch
 #import torch.optim as optim
@@ -32,7 +33,14 @@ def main():
     cfg.output = args.output
     cfg.gpu = args.gpu
 
-    torch.cuda.set_device(cfg.gpu)
+    logger.setup(cfg.workdir, name='%s_fold%d' % (cfg.mode, cfg.fold))
+    torch.cuda.set_device(cfg.gpu) # <----
+
+    log(f'mode: {cfg.mode}')
+    log(f'workdir: {cfg.workdir}')
+    log(f'fold: {cfg.fold}')
+    log(f'batch size: {cfg.batch_size}')
+    #log(f'acc: {cfg.data.train.n_grad_acc}')
 
 
     model=factory.get_model(cfg)
