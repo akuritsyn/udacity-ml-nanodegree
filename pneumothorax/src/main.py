@@ -40,7 +40,7 @@ def main():
     log(f'workdir: {cfg.workdir}')
     log(f'fold: {cfg.fold}')
     log(f'batch size: {cfg.batch_size}')
-    #log(f'acc: {cfg.data.train.n_grad_acc}')
+    log(f'acc: {cfg.data.train.n_grad_acc}')
 
 
     model=factory.get_model(cfg)

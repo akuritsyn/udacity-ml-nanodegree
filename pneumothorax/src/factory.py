@@ -79,12 +79,12 @@ class Trainer(object):
         self.workdir=cfg.workdir
         self.fold = cfg.fold
         self.size = cfg.img_size
-        self.accumulation_steps = cfg.acc_steps
-        self.lr = cfg.optim['params']['lr']
+        self.accumulation_steps = cfg.data.train.n_grad_acc
+        self.lr = cfg.optim.params.lr
         self.num_epochs = cfg.epochs
-        self.batch_size = {"train": cfg.batch_size, "val": 2}
+        self.batch_size = {"train": cfg.batch_size, "valid": cfg.data.valid.loader.batch_size}
         self.best_loss = float("inf")
-        self.phases = ["train", "val"]
+        self.phases = ["train", "valid"]
         self.device = torch.device(gpu)
         torch.set_default_tensor_type("torch.cuda.FloatTensor")
         self.net = model
@@ -97,12 +97,12 @@ class Trainer(object):
             phase: provider(
                 fold=self.fold,
                 total_folds=cfg.n_fold,
-                data_folder=cfg.data_folder,
-                df_path=cfg.train_rle_path,
+                data_folder=cfg.data.train.imgdir,
+                df_path=cfg.data.train.train_rle_path,
                 phase=phase,
                 size=self.size,
-                mean=cfg.normalize['mean'], #(0.485, 0.456, 0.406),
-                std=cfg.normalize['std'],  #(0.229, 0.224, 0.225),
+                mean=cfg.normalize.mean, #(0.485, 0.456, 0.406),
+                std=cfg.normalize.std,  #(0.229, 0.224, 0.225),
                 batch_size=self.batch_size[phase],
                 num_workers=self.num_workers,
             )
@@ -160,7 +160,7 @@ class Trainer(object):
                 "state_dict": self.net.state_dict(),
                 "optimizer": self.optimizer.state_dict(),
             }
-            val_loss = self.iterate(epoch, "val")
+            val_loss = self.iterate(epoch, "valid")
             self.scheduler.step(val_loss)
             if val_loss < self.best_loss:
                 print("******** New optimal found, saving state ********")
