@@ -9,6 +9,7 @@ import cv2
 import os
 import numpy as np
 from .rle_functions import run_length_decode
+from .utils.logger import log
 
 class SIIMDataset(Dataset):
     def __init__(self, df, data_folder, size, mean, std, phase):
@@ -76,18 +77,12 @@ def get_transforms(phase, size, mean, std):
     return list_trfms
 
 def provider(
-    fold,
-    total_folds,
-    data_folder,
-    df_path,
+    cfg,
     phase,
-    size,
-    mean=None,
-    std=None,
     batch_size=8,
-    num_workers=4,
 ):
-    df = pd.read_csv(df_path)
+    #Think about saving this part into make_folds.py and just loading it here from cache
+    df = pd.read_csv(cfg.data.train.train_rle_path)
 #     df = df.drop_duplicates('ImageId')
     df_with_mask = df[df["EncodedPixels"] != "-1"]
     df_with_mask['has_mask'] = 1
@@ -97,20 +92,21 @@ def provider(
     df = pd.concat([df_with_mask, df_without_mask_sampled])
   
     
-    kfold = StratifiedKFold(total_folds, shuffle=True, random_state=69)
+    kfold = StratifiedKFold(cfg.n_fold, shuffle=True, random_state=cfg.seed)
     train_idx, val_idx = list(kfold.split(
-        df["ImageId"], df["has_mask"]))[fold]
+        df["ImageId"], df["has_mask"]))[cfg.fold]
     train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
     df = train_df if phase == "train" else val_df
-    # NOTE: total_folds=5 -> train/val : 80%/20%
+    # NOTE: n_fold=5 -> train/val : 80%/20%
     
-    image_dataset = SIIMDataset(df, data_folder, size, mean, std, phase)
+    image_dataset = SIIMDataset(df, cfg.data.train.imgdir, cfg.img_size, cfg.normalize.mean, cfg.normalize.std, phase)
 
     dataloader = DataLoader(
         image_dataset,
         batch_size=batch_size,
-        num_workers=num_workers,
+        num_workers=cfg.num_workers,
         pin_memory=True,
         shuffle=True,
     )
+    log(f'{phase} data: loaded {len(dataloader.dataset)} records')
     return dataloader

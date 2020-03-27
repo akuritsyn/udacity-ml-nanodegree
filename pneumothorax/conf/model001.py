@@ -7,7 +7,7 @@ seed = 69
 
 n_fold = 5
 epochs = 50
-resume_from = './model/model001/model_512_0.pth'
+resume_from = './model/model001/model_512_1.pth'
 
 batch_size = 4
 #acc_steps = 4

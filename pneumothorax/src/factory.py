@@ -95,16 +95,9 @@ class Trainer(object):
         cudnn.benchmark = True
         self.dataloaders = {
             phase: provider(
-                fold=self.fold,
-                total_folds=cfg.n_fold,
-                data_folder=cfg.data.train.imgdir,
-                df_path=cfg.data.train.train_rle_path,
+                cfg,
                 phase=phase,
-                size=self.size,
-                mean=cfg.normalize.mean, #(0.485, 0.456, 0.406),
-                std=cfg.normalize.std,  #(0.229, 0.224, 0.225),
                 batch_size=self.batch_size[phase],
-                num_workers=self.num_workers,
             )
             for phase in self.phases
         }
@@ -122,8 +115,9 @@ class Trainer(object):
     def iterate(self, epoch, phase):
         meter = Meter(phase, epoch)
         start = time.strftime("%H:%M:%S")
-        print(f"Starting epoch: {epoch} | phase: {phase} | ⏰: {start}")
-        
+        #print(f"Starting epoch: {epoch} | phase: {phase} | ⏰: {start}")
+        log(f"Starting epoch: {epoch} | phase: {phase} | ⏰: {start}")
+
         self.net.train(phase == "train")
         dataloader = self.dataloaders[phase]
         running_loss = 0.0
@@ -153,6 +147,7 @@ class Trainer(object):
 
     def start(self):
         for epoch in range(self.num_epochs):
+
             self.iterate(epoch, "train")
             state = {
                 "epoch": epoch,
@@ -163,7 +158,8 @@ class Trainer(object):
             val_loss = self.iterate(epoch, "valid")
             self.scheduler.step(val_loss)
             if val_loss < self.best_loss:
-                print("******** New optimal found, saving state ********")
+                log("******** New optimal found, saving state ********")
+                #print("******** New optimal found, saving state ********")
                 state["best_loss"] = self.best_loss = val_loss
                 torch.save(state, self.workdir+"/model_{}_{}.pth".format(self.size,self.fold))
             print()
