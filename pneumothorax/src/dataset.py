@@ -8,7 +8,7 @@ from sklearn.model_selection import StratifiedKFold
 import cv2
 import os
 import numpy as np
-from rle_functions import run_length_decode
+from .rle_functions import run_length_decode
 
 class SIIMDataset(Dataset):
     def __init__(self, df, data_folder, size, mean, std, phase):
