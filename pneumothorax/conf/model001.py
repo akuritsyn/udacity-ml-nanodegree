@@ -15,6 +15,10 @@ acc_steps = 4
 num_workers = 4
 img_size = 1024
 
+model = dict(
+    name='unet_resnet34',
+    pretrained='imagenet',
+)
 
 optim = dict(
     name='Adam',
@@ -23,33 +27,26 @@ optim = dict(
     ),
 )
 
-normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225],}
-
-"""
 loss = dict(
-    name='BCEWithLogitsLoss',
-    params=dict(),
-)
-
-
-
-model = dict(
-    name='se_resnext50_32x4d',
-    pretrained='imagenet',
-    n_output=6,
-)
-
-scheduler = dict(
-    name='MultiStepLR',
+    name='MixedLoss',
     params=dict(
-        milestones=[1,2],
-        gamma=2/3,
+        alpha=10,
+        gamma=2,
     ),
 )
 
+scheduler = dict(
+    name='ReduceLROnPlateau',
+    params=dict(
+        mode="min", 
+        patience=3, 
+        verbose=True,
+    ),
+)
 
-normalize = None
+normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225],}
 
+"""
 crop = dict(name='RandomResizedCrop', params=dict(height=imgsize[0], width=imgsize[1], scale=(0.7,1.0), p=1.0))
 resize = dict(name='Resize', params=dict(height=imgsize[0], width=imgsize[1]))
 hflip = dict(name='HorizontalFlip', params=dict(p=0.5,))
@@ -57,8 +54,6 @@ vflip = dict(name='VerticalFlip', params=dict(p=0.5,))
 contrast = dict(name='RandomBrightnessContrast', params=dict(brightness_limit=0.08, contrast_limit=0.08, p=0.5))
 totensor = dict(name='ToTensor', params=dict(normalize=normalize))
 rotate = dict(name='Rotate', params=dict(limit=30, border_mode=0), p=0.7)
-
-window_policy = 2
 
 data = dict(
     train=dict(

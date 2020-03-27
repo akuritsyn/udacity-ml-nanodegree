@@ -1,5 +1,5 @@
 model=model001
-gpu=1
+gpu=0
 fold=0
 conf=./conf/${model}.py
 

@@ -5,6 +5,7 @@ import torch
 from torch import nn
 import torch.optim
 from torch.optim import lr_scheduler
+#from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
@@ -12,6 +13,7 @@ import torch.backends.cudnn as cudnn
 warnings.filterwarnings("ignore")
 import segmentation_models_pytorch as smp
 
+from .mixed_loss import MixedLoss
 from .metrics import Meter
 from .metrics import epoch_log
 from .dataset import provider
@@ -24,32 +26,47 @@ from .dataset import provider
 #train_rle_path = '../input/stage_2_train.csv' #'train-rle.csv' #
 
 
-
-
 def get_model(cfg):
-    model = smp.Unet("resnet34", encoder_weights="imagenet", activation=None)
-    return model
+    #log(f'model: {cfg.model.name}')
+    #log(f'pretrained: {cfg.model.pretrained}')
+    if cfg.model.name=='unet_resnet34':
+        model = smp.Unet("resnet34", encoder_weights="imagenet", activation=None)
+        return model
+
 
 def get_optim(cfg, parameters):
     optim = getattr(torch.optim, cfg.optim.name)(parameters, **cfg.optim.params)
     #log(f'optim: {cfg.optim.name}')
     return optim
 
+
 def get_loss(cfg):
-    loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
     #log('loss: %s' % cfg.loss.name)
-    return loss  
+    if cfg.loss.name=='MixedLoss':
+        criterion=MixedLoss(cfg.loss.params.alpha, cfg.loss.params.gamma)
+        return criterion
+
+    # loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
+    # return loss  
+
 
 def get_scheduler(cfg, optim, last_epoch):
-    
-    scheduler = getattr(lr_scheduler, cfg.scheduler.name)(
-        optim,
-        last_epoch=last_epoch,
-        **cfg.scheduler.params,
-    )
-    
+    if cfg.scheduler.name == 'ReduceLROnPlateau':
+        scheduler = lr_scheduler.ReduceLROnPlateau(
+            optim,
+            **cfg.scheduler.params,
+        )
+        scheduler.last_epoch = last_epoch
+        return scheduler
+    #else:
+        # scheduler = getattr(lr_scheduler, cfg.scheduler.name)(
+        #     optim,
+        #     last_epoch=last_epoch,
+        #     **cfg.scheduler.params,
+        # )
     #log(f'last_epoch: {last_epoch}')
-    return scheduler  
+    #return scheduler
+
 
 class Trainer(object):
     '''This class takes care of training and validation of our model'''
@@ -68,7 +85,7 @@ class Trainer(object):
         torch.set_default_tensor_type("torch.cuda.FloatTensor")
         self.net = model
         self.criterion = criterion
-        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr)
+        self.optimizer = optimizer #.Adam(self.net.parameters(), lr=self.lr)
         self.scheduler = scheduler
         self.net = self.net.to(self.device)
         cudnn.benchmark = True
