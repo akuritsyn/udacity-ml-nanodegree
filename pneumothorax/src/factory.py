@@ -55,6 +55,7 @@ def get_loss(cfg):
 
 
 def get_scheduler(cfg, optim, last_epoch):
+    log(f'scheduler: {cfg.scheduler.name}')
     if cfg.scheduler.name == 'ReduceLROnPlateau':
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optim,
@@ -78,7 +79,7 @@ class Trainer(object):
         self.num_workers = cfg.num_workers
         self.workdir=cfg.workdir
         self.fold = cfg.fold
-        self.size = cfg.img_size
+        self.size = cfg.imgsize
         self.accumulation_steps = cfg.data.train.n_grad_acc
         self.lr = cfg.optim.params.lr
         self.num_epochs = cfg.epochs
@@ -162,4 +163,5 @@ class Trainer(object):
                 #print("******** New optimal found, saving state ********")
                 state["best_loss"] = self.best_loss = val_loss
                 torch.save(state, self.workdir+"/model_{}_{}.pth".format(self.size,self.fold))
-            print()
+            #print()
+            log("")

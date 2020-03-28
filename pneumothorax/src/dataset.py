@@ -48,7 +48,6 @@ def get_transforms(phase, size, mean, std):
     if phase == "train":
         list_transforms.extend(
             [
-#                 HorizontalFlip(),
                 albu.HorizontalFlip(),
                 albu.OneOf([
                     albu.RandomContrast(),
@@ -61,7 +60,6 @@ def get_transforms(phase, size, mean, std):
                     albu.OpticalDistortion(distort_limit=2, shift_limit=0.5),
                     ], p=0.3), 
                 albu.ShiftScaleRotate(),
-            
 #                 GaussNoise(),
             ]
         )
@@ -99,7 +97,7 @@ def provider(
     df = train_df if phase == "train" else val_df
     # NOTE: n_fold=5 -> train/val : 80%/20%
     
-    image_dataset = SIIMDataset(df, cfg.data.train.imgdir, cfg.img_size, cfg.normalize.mean, cfg.normalize.std, phase)
+    image_dataset = SIIMDataset(df, cfg.data.train.imgdir, cfg.imgsize, cfg.normalize.mean, cfg.normalize.std, phase)
 
     dataloader = DataLoader(
         image_dataset,
