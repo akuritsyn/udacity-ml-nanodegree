@@ -3,10 +3,11 @@ seed = 69
 
 n_fold = 5
 epochs = 50
-resume_from = './model/model001/model_512_1.pth'
+resume_from = None
+retrain_from = './model/model001/model_512_1.pth'
 
 batch_size = 4
-#acc_steps = 4
+n_grad_acc = 4
 num_workers = 4
 imgsize = 1024
 
@@ -33,13 +34,13 @@ loss = dict(
 scheduler = dict(
     name='ReduceLROnPlateau',
     params=dict(
-        mode="min", 
-        patience=3, 
+        mode="min",
+        patience=3,
         verbose=True,
     ),
 )
 
-normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225],}
+normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]}
 
 
 # crop = dict(name='RandomResizedCrop', params=dict(height=imgsize[0], width=imgsize[1], scale=(0.7,1.0), p=1.0))
@@ -52,12 +53,12 @@ totensor = dict(name='ToTensor', params=dict(normalize=normalize))
 
 data = dict(
     train=dict(
-        #dataset_type='CustomDataset',
-        #annotations='./cache/train_folds.pkl',
+        # dataset_type='CustomDataset',
+        # annotations='./cache/train_folds.pkl',
         imgdir='./input/1024-s2/train',
-        train_rle_path = './input/stage_2_train.csv',
+        train_rle_path='./input/stage_2_train.csv',
         imgsize=imgsize,
-        n_grad_acc=4,
+        n_grad_acc=n_grad_acc,
         loader=dict(
             shuffle=True,
             batch_size=batch_size,
@@ -65,15 +66,14 @@ data = dict(
             num_workers=num_workers,
             pin_memory=True,
         ),
-        #transforms=[crop, hflip, rotate, contrast, totensor],
-        #dataset_policy='all',
-        #window_policy=window_policy,
+        # transforms=[crop, hflip, rotate, contrast, totensor],
     ),
-    valid = dict(
-        #dataset_type='CustomDataset',
-        #annotations='./cache/train_folds.pkl',
+    valid=dict(
+        # dataset_type='CustomDataset',
+        # annotations='./cache/train_folds.pkl',
         imgdir='./input/1024-s2/train',
         imgsize=imgsize,
+        n_grad_acc=n_grad_acc,
         loader=dict(
             shuffle=False,
             batch_size=2,
@@ -81,17 +81,15 @@ data = dict(
             num_workers=num_workers,
             pin_memory=True,
         ),
-        #transforms=[crop, hflip, rotate, contrast, totensor],
-        #dataset_policy='all',
-        #window_policy=window_policy,
+        # transforms=[crop, hflip, rotate, contrast, totensor],
     ),
-    test = dict(
-        #dataset_type='CustomDataset',
-        #annotations='./cache/test.pkl',
+    test=dict(
+        # dataset_type='CustomDataset',
+        # annotations='./cache/test.pkl',
         normalize=normalize,
         imgdir='./input/1024-s2/test',
- #       sample_submission_file = './input/stage_2_sample_submission.csv',
-        sample_submission_file = './predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
+        # sample_submission_file = './input/stage_2_sample_submission.csv',
+        sample_submission_file='./predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
         trained_models=workdir+'/'+'model_1024_*.pth',
         imgsize=imgsize,
         loader=dict(
@@ -103,11 +101,9 @@ data = dict(
         ),
         transforms=[resize, totensor],
         transforms_and_hflip=[hflip, resize, totensor],
-        prob_threshold = 0.55,
-        min_object_size = 3500, #pixels
-        output_file_probabilty_name = 'pixel_probabilities_1024.pkl',
-        submission_file_name = 'submission_pytorch_5fold_ave_Wflip_0p55th.csv',
-        #dataset_policy='all',
-        #window_policy=window_policy,
+        prob_threshold=0.55,
+        min_object_size=3500,  # pixels
+        output_file_probabilty_name='pixel_probabilities_1024.pkl',
+        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th.csv',
     ),
 )

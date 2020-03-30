@@ -2,10 +2,12 @@ import numpy as np
 import torch
 from .utils.logger import log
 
+
 def predict(X, threshold):
     X_p = np.copy(X)
     preds = (X_p > threshold).astype('uint8')
     return preds
+
 
 def metric(probability, truth, threshold=0.5, reduction='none'):
     '''Calculates dice of positive and negative images seperately'''
@@ -40,10 +42,11 @@ def metric(probability, truth, threshold=0.5, reduction='none'):
 
     return dice, dice_neg, dice_pos, num_neg, num_pos
 
+
 class Meter:
     '''A meter to keep track of iou and dice scores throughout an epoch'''
-    def __init__(self, phase, epoch):
-        self.base_threshold = 0.5 # <<<<<<<<<<< here's the threshold
+    def __init__(self):
+        self.base_threshold = 0.5  # <<<<<<<<<<< here's the threshold
         self.base_dice_scores = []
         self.dice_neg_scores = []
         self.dice_pos_scores = []
@@ -67,13 +70,14 @@ class Meter:
         iou = np.nanmean(self.iou_scores)
         return dices, iou
 
-def epoch_log(phase, epoch, epoch_loss, meter, start):
+
+def epoch_log(epoch_loss, meter):
     '''logging the metrics at the end of an epoch'''
     dices, iou = meter.get_metrics()
     dice, dice_neg, dice_pos = dices
     log("Loss: %0.4f | dice: %0.4f | dice_neg: %0.4f | dice_pos: %0.4f | IoU: %0.4f" % (epoch_loss, dice, dice_neg, dice_pos, iou))
-    #print("Loss: %0.4f | dice: %0.4f | dice_neg: %0.4f | dice_pos: %0.4f | IoU: %0.4f" % (epoch_loss, dice, dice_neg, dice_pos, iou))
     return dice, iou
+
 
 def compute_ious(pred, label, classes, ignore_index=255, only_present=True):
     '''computes iou for one ground truth mask and predicted mask'''
@@ -95,8 +99,8 @@ def compute_ious(pred, label, classes, ignore_index=255, only_present=True):
 def compute_iou_batch(outputs, labels, classes=None):
     '''computes mean iou for a batch of ground truth masks and predicted masks'''
     ious = []
-    preds = np.copy(outputs) # copy is imp
-    labels = np.array(labels) # tensor to np
+    preds = np.copy(outputs)  # copy is imp
+    labels = np.array(labels)  # tensor to np
     for pred, label in zip(preds, labels):
         ious.append(np.nanmean(compute_ious(pred, label, classes)))
     iou = np.nanmean(ious)

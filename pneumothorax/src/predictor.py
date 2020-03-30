@@ -1,12 +1,12 @@
 import os
 import glob
 from tqdm import tqdm
-import pandas as pd
+# import pandas as pd
 import numpy as np
 
 import albumentations as albu
-from albumentations.torch import ToTensor
-from torch.utils.data import DataLoader, Dataset #, sampler
+# from albumentations.torch import ToTensor
+from torch.utils.data import DataLoader, Dataset  # , sampler
 import torch
 import cv2
 
@@ -18,11 +18,11 @@ class TestDataset(Dataset):
         self.root = cfg.imgdir
         self.fnames = list(df["ImageId"])
         self.num_samples = len(self.fnames)
-        
+
         if not hflip:
-            _transforms=cfg.transforms
+            _transforms = cfg.transforms
         else:
-             _transforms=cfg.transforms_and_hflip
+            _transforms = cfg.transforms_and_hflip
         self.transform = get_transforms(_transforms)
 
     def __getitem__(self, idx):
@@ -33,7 +33,7 @@ class TestDataset(Dataset):
         return images
 
     def __len__(self):
-        return self.num_samples   
+        return self.num_samples
 
 
 def get_dataloader(cfg, df, hflip=False):
@@ -53,27 +53,27 @@ def get_transforms(tfms):
 
 
 def get_pixel_probabilities(cfg, model, testset, hflip=False):
-    
+
     pixel_probabilities = []
     imgsize = cfg.data.test.imgsize
-    trained_models=glob.glob(cfg.data.test.trained_models)
+    trained_models = glob.glob(cfg.data.test.trained_models)
     log(f'Making predictions on test images using the following models: {trained_models}')
-    assert len(trained_models)==cfg.n_fold
+    assert len(trained_models) == cfg.n_fold
 
     for batch in tqdm(testset):
 
         for j in range(cfg.n_fold):
             model_checkpoint = torch.load(trained_models[j], map_location=lambda storage, loc: storage)
             model.load_state_dict(model_checkpoint["state_dict"])
-            #model.cuda()
-            if j==0:
+            # model.cuda()
+            if j == 0:
                 predictions_ave = torch.sigmoid(model(batch.cuda()))
             else:
-                predictions_ave += torch.sigmoid(model(batch.cuda())) # to(device)
-            #model.cpu()
+                predictions_ave += torch.sigmoid(model(batch.cuda()))  # to(device)
+            # model.cpu()
         predictions_ave = predictions_ave / cfg.n_fold
 
-        predictions_ave = predictions_ave.detach().cpu().numpy()[:, 0, :, :] # (batch_size, 1, size, size) -> (batch_size, size, size)
+        predictions_ave = predictions_ave.detach().cpu().numpy()[:, 0, :, :]  # (batch_size, 1, size, size) -> (batch_size, size, size)
         for probability in predictions_ave:
             if probability.shape != (imgsize, imgsize):
                 probability = cv2.resize(probability, dsize=(imgsize, imgsize), interpolation=cv2.INTER_LINEAR)

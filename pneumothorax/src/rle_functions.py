@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def run_length_decode(rle, height=1024, width=1024, fill_value=1):
     component = np.zeros((height, width), np.float32)
     component = component.reshape(-1)
@@ -13,6 +14,7 @@ def run_length_decode(rle, height=1024, width=1024, fill_value=1):
         start = end
     component = component.reshape(width, height).T
     return component
+
 
 def run_length_encode(component):
     component = component.T.flatten()

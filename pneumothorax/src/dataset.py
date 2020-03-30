@@ -1,15 +1,16 @@
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
-import albumentations as albu
 
+import albumentations as albu
 from albumentations.torch import ToTensor
-#from torchvision.transforms import ToTensor
+# from torchvision.transforms import ToTensor
 from sklearn.model_selection import StratifiedKFold
 import cv2
 import os
 import numpy as np
 from .rle_functions import run_length_decode
 from .utils.logger import log
+
 
 class SIIMDataset(Dataset):
     def __init__(self, df, data_folder, size, mean, std, phase):
@@ -33,7 +34,7 @@ class SIIMDataset(Dataset):
         if annotations[0] != '-1':
             for rle in annotations:
                 mask += run_length_decode(rle)
-        mask = (mask >= 1).astype('float32') # for overlap cases
+        mask = (mask >= 1).astype('float32')  # for overlap cases
         augmented = self.transforms(image=image, mask=mask)
         image = augmented['image']
         mask = augmented['mask']
@@ -58,9 +59,9 @@ def get_transforms(phase, size, mean, std):
                     albu.ElasticTransform(alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03),
                     albu.GridDistortion(),
                     albu.OpticalDistortion(distort_limit=2, shift_limit=0.5),
-                    ], p=0.3), 
+                    ], p=0.3),
                 albu.ShiftScaleRotate(),
-#                 GaussNoise(),
+                # GaussNoise(),
             ]
         )
     list_transforms.extend(
@@ -74,12 +75,13 @@ def get_transforms(phase, size, mean, std):
     list_trfms = albu.Compose(list_transforms)
     return list_trfms
 
+
 def provider(
     cfg,
     phase,
     batch_size=8,
 ):
-    #Think about saving this part into make_folds.py and just loading it here from cache
+    # Think about saving this part into make_folds.py and just loading it here from cache
     df = pd.read_csv(cfg.data.train.train_rle_path)
 #     df = df.drop_duplicates('ImageId')
     df_with_mask = df[df["EncodedPixels"] != "-1"]
@@ -88,15 +90,18 @@ def provider(
     df_without_mask['has_mask'] = 0
     df_without_mask_sampled = df_without_mask.sample(len(df_with_mask.drop_duplicates('ImageId')))
     df = pd.concat([df_with_mask, df_without_mask_sampled])
-  
-    
+
     kfold = StratifiedKFold(cfg.n_fold, shuffle=True, random_state=cfg.seed)
     train_idx, val_idx = list(kfold.split(
         df["ImageId"], df["has_mask"]))[cfg.fold]
     train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
     df = train_df if phase == "train" else val_df
     # NOTE: n_fold=5 -> train/val : 80%/20%
-    
+
+    if cfg.debug:
+        df = df.head(cfg.debug)
+        log('Debug mode: loading first %d records' % df.shape[0])
+
     image_dataset = SIIMDataset(df, cfg.data.train.imgdir, cfg.imgsize, cfg.normalize.mean, cfg.normalize.std, phase)
 
     dataloader = DataLoader(

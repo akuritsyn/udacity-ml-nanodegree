@@ -1,8 +1,8 @@
 import os
 import random
-import glob
+# import glob
 
-import pandas as pd
+# import pandas as pd
 import numpy as np
 import torch
 
@@ -34,7 +34,7 @@ def save_model(model, optim, detail, fold, dirname):
 
 def load_model(path, model, optim=None):
 
-    # remap everthing onto CPU 
+    # remap everthing onto CPU
     state = torch.load(str(path), map_location=lambda storage, location: storage)
 
     model.load_state_dict(state['model'])
