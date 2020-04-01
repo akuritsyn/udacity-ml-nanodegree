@@ -1,81 +1,92 @@
 import numpy as np
 import torch
+import cv2
 from .utils.logger import log
+# from .predictor import post_process
 
 
-def predict(X, threshold):
+def predict_masks(X, prob_threshold=0.5):
     X_p = np.copy(X)
-    preds = (X_p > threshold).astype('uint8')
+    preds = (X_p >= prob_threshold).astype('uint8')
     return preds
 
 
-def metric(probability, truth, threshold=0.5, reduction='none'):
+def zero_small_masks(probability, imgsize=1024, prob_threshold=0.5, min_object_size=3500):
+    mask = cv2.threshold(probability, prob_threshold, 1, cv2.THRESH_BINARY)[1]
+    num_component, component = cv2.connectedComponents(mask.astype(np.uint8))
+    predictions = np.zeros((imgsize, imgsize), np.float32)
+    num = 0
+    for c in range(1, num_component):
+        p = (component == c)
+        if p.sum() > min_object_size:
+            predictions[p] = 1
+            num += 1
+    return predictions, num
+
+
+def metric(probability, truth, imgsize, prob_threshold, min_object_size):
     '''Calculates dice of positive and negative images seperately'''
     '''probability and truth must be torch tensors'''
     batch_size = len(truth)
     with torch.no_grad():
-        probability = probability.view(batch_size, -1)
-        truth = truth.view(batch_size, -1)
-        assert(probability.shape == truth.shape)
 
-        p = (probability > threshold).float()
+        # probability = probability.view(batch_size, -1)
+        truth = truth.view(batch_size, -1)  # torch.Size([4, 1048576])
+        # assert(probability.shape == truth.shape)
         t = (truth > 0.5).float()
+        # print(probability.shape, truth.shape)
 
-        t_sum = t.sum(-1)
-        p_sum = p.sum(-1)
-        neg_index = torch.nonzero(t_sum == 0)
-        pos_index = torch.nonzero(t_sum >= 1)
+        if min_object_size:
+            probability = probability.numpy()[:, 0, :, :]  # torch.Size([4, 1, 1024, 1024]) --> [4, 1024, 1024]
+            for i, prob in enumerate(probability):
+                predict, num_predict = zero_small_masks(prob, imgsize, prob_threshold, min_object_size)
+                if num_predict == 0:
+                    probability[i, :, :] = 0
+                else:
+                    probability[i, :, :] = predict
+            p = torch.from_numpy(probability)
+            p = p.view(batch_size, -1).float()  # torch.Size([4, 1048576])
+        else:
+            probability = probability.view(batch_size, -1)
+            p = (probability > prob_threshold).float()
 
-        dice_neg = (p_sum == 0).float()
-        dice_pos = 2 * (p*t).sum(-1)/((p+t).sum(-1))
+        EPS = 1e-6
+        intersection = torch.sum(p * t, dim=1)
+        union = torch.sum(p, dim=1) + torch.sum(t, dim=1) + EPS
+        dice = (2*(intersection + EPS) / union).mean()
+        if dice > 1:
+            dice = 1
 
-        dice_neg = dice_neg[neg_index]
-        dice_pos = dice_pos[pos_index]
-        dice = torch.cat([dice_pos, dice_neg])
-
-        dice_neg = np.nan_to_num(dice_neg.mean().item(), 0)
-        dice_pos = np.nan_to_num(dice_pos.mean().item(), 0)
-        dice = dice.mean().item()
-
-        num_neg = len(neg_index)
-        num_pos = len(pos_index)
-
-    return dice, dice_neg, dice_pos, num_neg, num_pos
+    return dice
 
 
 class Meter:
     '''A meter to keep track of iou and dice scores throughout an epoch'''
-    def __init__(self):
-        self.base_threshold = 0.5  # <<<<<<<<<<< here's the threshold
+    def __init__(self, cfg):
+        self.imgsize = cfg.imgsize
+        self.prob_threshold = cfg.prob_threshold
+        self.min_object_size = cfg.min_object_size
         self.base_dice_scores = []
-        self.dice_neg_scores = []
-        self.dice_pos_scores = []
         self.iou_scores = []
 
     def update(self, targets, outputs):
         probs = torch.sigmoid(outputs)
-        dice, dice_neg, dice_pos, _, _ = metric(probs, targets, self.base_threshold)
+        dice = metric(probs, targets, self.imgsize, self.prob_threshold, self.min_object_size)
         self.base_dice_scores.append(dice)
-        self.dice_pos_scores.append(dice_pos)
-        self.dice_neg_scores.append(dice_neg)
-        preds = predict(probs, self.base_threshold)
+        preds = predict_masks(probs, self.prob_threshold)
         iou = compute_iou_batch(preds, targets, classes=[1])
         self.iou_scores.append(iou)
 
     def get_metrics(self):
         dice = np.mean(self.base_dice_scores)
-        dice_neg = np.mean(self.dice_neg_scores)
-        dice_pos = np.mean(self.dice_pos_scores)
-        dices = [dice, dice_neg, dice_pos]
         iou = np.nanmean(self.iou_scores)
-        return dices, iou
+        return dice, iou
 
 
 def epoch_log(epoch_loss, meter):
     '''logging the metrics at the end of an epoch'''
-    dices, iou = meter.get_metrics()
-    dice, dice_neg, dice_pos = dices
-    log("Loss: %0.4f | dice: %0.4f | dice_neg: %0.4f | dice_pos: %0.4f | IoU: %0.4f" % (epoch_loss, dice, dice_neg, dice_pos, iou))
+    dice, iou = meter.get_metrics()
+    log("Loss: %0.4f | dice: %0.4f | IoU: %0.4f" % (epoch_loss, dice, iou))
     return dice, iou
 
 

@@ -2,10 +2,10 @@ workdir = './model/model002'
 seed = 69
 
 n_fold = 5
-epochs = 10
+epochs = 20
 sample_classes = True
 resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './model/model001/model_1024_0.pth'
+retrain_from = './predict/model_1024_0.pth'
 
 batch_size = 4
 n_grad_acc = 4
@@ -20,7 +20,7 @@ model = dict(
 optim = dict(
     name='Adam',
     params=dict(
-        lr=5e-5, #lr=5e-4
+        lr=1e-5,  # lr=5e-4
     ),
 )
 
@@ -88,7 +88,7 @@ data = dict(
             pin_memory=True,
         ),
         prob_threshold=prob_threshold,
-        min_object_size=min_object_size,
+        min_object_size=None  # min_object_size,
         # transforms=[crop, hflip, rotate, contrast, totensor],
     ),
     test=dict(

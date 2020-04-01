@@ -54,6 +54,7 @@ def main():
     log(f'Gradient accumulation: {cfg.n_grad_acc}')
 
     util.set_seed(cfg.seed)
+    torch.cuda.manual_seed(cfg.seed)
     torch.cuda.set_device(cfg.gpu)
     torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -120,6 +121,7 @@ def train(cfg, model):
 
     best = {
         'loss': float('inf'),
+        'score': 0,
         'epoch': -1,
     }
 
@@ -134,18 +136,17 @@ def train(cfg, model):
         model.load_state_dict(state["state_dict"])
         best['epoch'] = state['epoch']
         best['loss'] = state['best_loss']
-        log(f'Resuming training from {cfg.resume_from} - \
-            starting epoch {best["epoch"]+1}')
+        best['score'] = state['best_score']
+        log(f'Resuming training from {cfg.resume_from} - starting epoch {best["epoch"]+1}')
         optimizer.load_state_dict(state['optimizer'])
-        log('loading optim too')
+        log('loading optimizer weights too')
         # model.cuda()
 
     if cfg.retrain_from:
         model.load_state_dict(torch.load(cfg.retrain_from,
                               map_location=lambda storage,
                               location: storage)["state_dict"])
-        log(f'Using weights from {cfg.retrain_from} - \
-            starting epoch {best["epoch"]+1}')
+        log(f'Using weights from {cfg.retrain_from} - starting epoch {best["epoch"]+1}')
         # model.cuda()
 
     scheduler = factory.get_scheduler(cfg, optimizer, best['epoch'])
@@ -169,6 +170,7 @@ def train(cfg, model):
         state = {
             "epoch": epoch,
             "best_loss": best['loss'],
+            "best_score": best['score'],
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }
@@ -184,17 +186,22 @@ def train(cfg, model):
             result = run_nn(cfg.data.valid, 'valid',
                             model, loader_valid, criterion)
 
-        val_loss = result['epoch_loss']
+        # val_loss = result['epoch_loss']
+        # !!!!!!
+        # val_loss = result['dice_score']
+
         training_summary['losses']['valid'].append(result['epoch_loss'])
         training_summary['dice_scores']['valid'].append(result['dice_score'])
         training_summary['iou_scores']['valid'].append(result['iou_score'])
 
-        scheduler.step(val_loss)
+        scheduler.step(result['epoch_loss'])
 
-        if val_loss <= best['loss']:
+        # if result['epoch_loss'] <= best['loss']:
+        if result['dice_score'] >= best['score']:
             log("******** New optimal found, saving state ********")
             log("")
-            state["best_loss"] = best['loss'] = val_loss
+            state["best_loss"] = best['loss'] = result['epoch_loss']
+            state["best_score"] = best['score'] = result['dice_score']
             torch.save(state, os.path.join(cfg.workdir,
                        "model_{}_{}.pth".format(cfg.imgsize, cfg.fold)))
 
@@ -206,7 +213,7 @@ def train(cfg, model):
 
 def run_nn(cfg, mode, model, loader, criterion, optimizer=None):
 
-    meter = Meter()
+    meter = Meter(cfg)
 
     if mode == 'train':
         model.train()
@@ -235,8 +242,8 @@ def run_nn(cfg, mode, model, loader, criterion, optimizer=None):
 
         with torch.no_grad():
             running_loss += loss.item()
-            # outputs = outputs.detach().cpu()
-            meter.update(targets.cpu(), outputs.cpu())
+            outputs = outputs.detach().cpu()
+            meter.update(targets.cpu(), outputs)
 #             tk0.set_postfix(loss=(running_loss / ((itr + 1))))
 
     epoch_loss = running_loss / total_batches  # * cfg.n_grad_acc

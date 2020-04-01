@@ -83,13 +83,30 @@ def provider(
 ):
     # Think about saving this part into make_folds.py and just loading it here from cache
     df = pd.read_csv(cfg.data.train.train_rle_path)
+
+    if cfg.sample_classes:
+
 #     df = df.drop_duplicates('ImageId')
-    df_with_mask = df[df["EncodedPixels"] != "-1"]
-    df_with_mask['has_mask'] = 1
-    df_without_mask = df[df["EncodedPixels"] == "-1"]
-    df_without_mask['has_mask'] = 0
-    df_without_mask_sampled = df_without_mask.sample(len(df_with_mask.drop_duplicates('ImageId')))
-    df = pd.concat([df_with_mask, df_without_mask_sampled])
+        df_with_mask = df[df["EncodedPixels"] != "-1"]
+        df_with_mask['has_mask'] = 1
+        df_without_mask = df[df["EncodedPixels"] == "-1"]
+        df_without_mask['has_mask'] = 0
+        df_without_mask_sampled = df_without_mask.sample(len(df_with_mask.drop_duplicates('ImageId')), random_state=cfg.seed)
+
+        if cfg.debug:
+            df = pd.concat([df_with_mask.head(cfg.debug//2), 
+                            df_without_mask_sampled.head(cfg.debug//2)])
+            log('Debug mode: reding first %d records with class sampler' % df.shape[0])
+        else:
+            log(f'Using class sampler: with mask - {df_with_mask.shape[0]}, without mask - {df_without_mask_sampled.shape[0]}')
+            df = pd.concat([df_with_mask, df_without_mask_sampled])
+
+    else:
+        df['has_mask'] = np.where(df["EncodedPixels"] != "-1", 1, 0)
+
+        if cfg.debug:
+            df = df.head(cfg.debug)
+            log('Debug mode: reading first %d records' % df.shape[0])
 
     kfold = StratifiedKFold(cfg.n_fold, shuffle=True, random_state=cfg.seed)
     train_idx, val_idx = list(kfold.split(
@@ -97,10 +114,6 @@ def provider(
     train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
     df = train_df if phase == "train" else val_df
     # NOTE: n_fold=5 -> train/val : 80%/20%
-
-    if cfg.debug:
-        df = df.head(cfg.debug)
-        log('Debug mode: loading first %d records' % df.shape[0])
 
     image_dataset = SIIMDataset(df, cfg.data.train.imgdir, cfg.imgsize, cfg.normalize.mean, cfg.normalize.std, phase)
 
