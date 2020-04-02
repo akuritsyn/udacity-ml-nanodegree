@@ -7,6 +7,7 @@ import os
 import time
 
 import torch
+import albumentations as albu
 
 from .utils.config import Config
 from .utils.logger import logger, log
@@ -17,6 +18,9 @@ from .rle_functions import run_length_encode
 from .dataset import provider
 from .metrics import Meter
 from .metrics import epoch_log
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def get_args():
@@ -77,11 +81,11 @@ def test(cfg, model):
         df = df.head(cfg.debug)  # 30
         log('Debug mode: loading first %d records of test data' % df.shape[0])
 
-    loader_test = predictor.get_dataloader(cfg.data.test, df)
+    loader_test = predictor.get_dataloader_test(cfg.data.test, df)
     log('Test data: loaded %d records' % len(loader_test.dataset))
     pixel_probs = predictor.get_pixel_probabilities(cfg, model, loader_test)
 
-    loader_test = predictor.get_dataloader(cfg.data.test, df, hflip=True)
+    loader_test = predictor.get_dataloader_test(cfg.data.test, df, hflip=True)
     log(f'H-flipped test data for TTA: loaded \
         {len(loader_test.dataset)} records')
     pixel_probs_hflipped = predictor.get_pixel_probabilities(
@@ -101,8 +105,9 @@ def test(cfg, model):
     # Generate submission file
     encoded_pixels = []
     for probability in pixel_probs:
-        predict, num_predict = predictor.post_process(cfg.data.test,
-                                                      probability)
+        predict, num_predict = predictor.post_process(
+                            probability, cfg.data.test.prob_threshold,
+                            cfg.data.test.min_object_size)
         if num_predict == 0:
             encoded_pixels.append('-1')
         else:
@@ -117,7 +122,7 @@ def test(cfg, model):
 def train(cfg, model):
 
     criterion = factory.get_loss(cfg)
-    optimizer = factory.get_optim(cfg, model.parameters())
+    optimizer = factory.get_optimizer(cfg, model.parameters())
 
     best = {
         'loss': float('inf'),
@@ -125,10 +130,8 @@ def train(cfg, model):
         'epoch': -1,
     }
 
-    loader_train = provider(cfg, phase='train',
-                            batch_size=cfg.data.train.loader.batch_size)
-    loader_valid = provider(cfg, phase='test',
-                            batch_size=cfg.data.test.loader.batch_size)
+    loader_train = provider(cfg, phase='train')
+    loader_valid = provider(cfg, phase='valid')
 
     if cfg.resume_from:
         state = torch.load(cfg.resume_from,
@@ -139,7 +142,7 @@ def train(cfg, model):
         best['score'] = state['best_score']
         log(f'Resuming training from {cfg.resume_from} - starting epoch {best["epoch"]+1}')
         optimizer.load_state_dict(state['optimizer'])
-        log('loading optimizer weights too')
+        log('Loading optimizer weights too')
         # model.cuda()
 
     if cfg.retrain_from:

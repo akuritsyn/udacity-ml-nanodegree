@@ -2,26 +2,13 @@ import numpy as np
 import torch
 import cv2
 from .utils.logger import log
-# from .predictor import post_process
+from .predictor import post_process
 
 
 def predict_masks(X, prob_threshold=0.5):
     X_p = np.copy(X)
     preds = (X_p >= prob_threshold).astype('uint8')
     return preds
-
-
-def zero_small_masks(probability, imgsize=1024, prob_threshold=0.5, min_object_size=3500):
-    mask = cv2.threshold(probability, prob_threshold, 1, cv2.THRESH_BINARY)[1]
-    num_component, component = cv2.connectedComponents(mask.astype(np.uint8))
-    predictions = np.zeros((imgsize, imgsize), np.float32)
-    num = 0
-    for c in range(1, num_component):
-        p = (component == c)
-        if p.sum() > min_object_size:
-            predictions[p] = 1
-            num += 1
-    return predictions, num
 
 
 def metric(probability, truth, imgsize, prob_threshold, min_object_size):
@@ -39,7 +26,7 @@ def metric(probability, truth, imgsize, prob_threshold, min_object_size):
         if min_object_size:
             probability = probability.numpy()[:, 0, :, :]  # torch.Size([4, 1, 1024, 1024]) --> [4, 1024, 1024]
             for i, prob in enumerate(probability):
-                predict, num_predict = zero_small_masks(prob, imgsize, prob_threshold, min_object_size)
+                predict, num_predict = post_process(prob, prob_threshold, min_object_size)
                 if num_predict == 0:
                     probability[i, :, :] = 0
                 else:

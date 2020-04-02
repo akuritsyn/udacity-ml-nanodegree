@@ -1,13 +1,13 @@
 import albumentations as albu
 
-workdir = './model/model003'
+workdir = './model/model004'
 seed = 69
 
 n_fold = 5
 epochs = 20
-sample_classes = False
+sample_classes = True
 resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './predict/model_1024_0.pth'
+retrain_from = './model/model002/model_1024_0.pth'
 
 train_rle_path = './input/stage_2_train.csv'
 train_imgdir = './input/1024-s2/train'
@@ -47,7 +47,7 @@ scheduler = dict(
 )
 
 prob_threshold = 0.5
-# min_object_size = 3500  # pixels
+min_object_size = 3500  # pixels
 
 normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]}
 
@@ -64,6 +64,9 @@ oneof_transform = dict(name='OneOf', args=[[
     albu.OpticalDistortion(distort_limit=2, shift_limit=0.5)]], params=dict(p=0.3))
 
 shiftscalerotate = dict(name='ShiftScaleRotate', args=[], params=dict())
+
+# normalize_old = dict(name='Normalize', args=[], params=dict(mean=normalize['mean'], std=normalize['std'], p=1))
+# totensor_old = dict(name='ToTensor', args=[], params=dict())
 
 resize = dict(name='Resize', args=[], params=dict(height=imgsize, width=imgsize))
 totensor = dict(name='ToTensor', args=[], params=dict(normalize=normalize))
@@ -101,8 +104,9 @@ data = dict(
             pin_memory=True,
         ),
         prob_threshold=prob_threshold,
-        min_object_size=None,  # min_object_size,
+        min_object_size=min_object_size,
         transforms=[resize, totensor],
+        # transforms=[normalize_old, resize, totensor_old],
     ),
     test=dict(
         normalize=normalize,

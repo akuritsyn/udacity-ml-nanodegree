@@ -1,16 +1,16 @@
 import os
 import glob
 from tqdm import tqdm
-# import pandas as pd
 import numpy as np
 
 import albumentations as albu
-# from albumentations.torch import ToTensor
+from albumentations.torch import ToTensor
 from torch.utils.data import DataLoader, Dataset  # , sampler
 import torch
 import cv2
 
 from .utils.logger import log
+from .factory import get_transforms
 
 
 class TestDataset(Dataset):
@@ -36,24 +36,13 @@ class TestDataset(Dataset):
         return self.num_samples
 
 
-def get_dataloader(cfg, df, hflip=False):
+def get_dataloader_test(cfg, df, hflip=False):
     dataset = TestDataset(cfg, df, hflip=hflip)
     loader = DataLoader(dataset, **cfg.loader)
     return loader
 
 
-def get_transforms(tfms):
-    def get_object(transform):
-        if hasattr(albu, transform.name):
-            return getattr(albu, transform.name)
-        else:
-            return eval(transform.name)
-    transforms = [get_object(transform)(**transform.params) for transform in tfms]
-    return albu.Compose(transforms)
-
-
 def get_pixel_probabilities(cfg, model, testset, hflip=False):
-
     pixel_probabilities = []
     imgsize = cfg.data.test.imgsize
     trained_models = glob.glob(cfg.data.test.trained_models)
@@ -85,14 +74,14 @@ def get_pixel_probabilities(cfg, model, testset, hflip=False):
     return pixel_probabilities
 
 
-def post_process(cfg, probability):
-    mask = cv2.threshold(probability, cfg.prob_threshold, 1, cv2.THRESH_BINARY)[1]
+def post_process(probability, prob_threshold=0.5, min_object_size=3500, imgsize=1024):
+    mask = cv2.threshold(probability, prob_threshold, 1, cv2.THRESH_BINARY)[1]
     num_component, component = cv2.connectedComponents(mask.astype(np.uint8))
-    predictions = np.zeros((cfg.imgsize, cfg.imgsize), np.float32)
+    predictions = np.zeros((imgsize, imgsize), np.float32)
     num = 0
     for c in range(1, num_component):
         p = (component == c)
-        if p.sum() > cfg.min_object_size:
+        if p.sum() > min_object_size:
             predictions[p] = 1
             num += 1
     return predictions, num
