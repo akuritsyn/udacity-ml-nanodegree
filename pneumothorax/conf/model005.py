@@ -1,16 +1,17 @@
 import albumentations as albu
 
-workdir = './model/model003'
+workdir = './model/model005'
 seed = 69
 
 n_fold = 5
-epochs = 20
-sample_classes = False
+epochs = 50
+sample_classes = True
 resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './predict/model_1024_0.pth'
+retrain_from = './model/model004/model_512_4.pth'
 
 train_rle_path = './input/stage_2_train.csv'
 train_imgdir = './input/1024-s2/train'
+# train_imgdir = './input/512-s2/train'
 
 batch_size = 4
 n_grad_acc = 4
@@ -25,7 +26,7 @@ model = dict(
 optim = dict(
     name='Adam',
     params=dict(
-        lr=1e-5,  # lr=5e-4
+        lr=5e-4,  # lr=5e-4
     ),
 )
 
@@ -47,7 +48,7 @@ scheduler = dict(
 )
 
 prob_threshold = 0.5
-# min_object_size = 3500  # pixels
+min_object_size = 3500  # pixels
 
 normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]}
 
@@ -64,6 +65,9 @@ oneof_transform = dict(name='OneOf', args=[[
     albu.OpticalDistortion(distort_limit=2, shift_limit=0.5)]], params=dict(p=0.3))
 
 shiftscalerotate = dict(name='ShiftScaleRotate', args=[], params=dict())
+
+# normalize_old = dict(name='Normalize', args=[], params=dict(mean=normalize['mean'], std=normalize['std'], p=1))
+# totensor_old = dict(name='ToTensor', args=[], params=dict())
 
 resize = dict(name='Resize', args=[], params=dict(height=imgsize, width=imgsize))
 totensor = dict(name='ToTensor', args=[], params=dict(normalize=normalize))
@@ -103,6 +107,7 @@ data = dict(
         prob_threshold=prob_threshold,
         min_object_size=None,  # min_object_size,
         transforms=[resize, totensor],
+        # transforms=[normalize_old, resize, totensor_old],
     ),
     test=dict(
         imgdir='./input/1024-s2/test',
@@ -122,6 +127,6 @@ data = dict(
         prob_threshold=0.55,
         min_object_size=3500,
         output_file_probabilty_name='pixel_probabilities_1024.pkl',
-        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th_FineTunedOnAllImages.csv',
+        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th_ReRunAll_with_ValDice.csv',
     ),
 )

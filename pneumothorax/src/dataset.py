@@ -1,10 +1,11 @@
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
+import pickle
 
 import albumentations as albu
 from albumentations.torch import ToTensor
 
-from sklearn.model_selection import StratifiedKFold
+# from sklearn.model_selection import StratifiedKFold
 import cv2
 import os
 import numpy as np
@@ -12,6 +13,7 @@ import numpy as np
 from .rle_functions import run_length_decode
 from .utils.logger import log
 from .factory import get_transforms
+
 
 class TrainDataset(Dataset):
     def __init__(self, cfg, df):
@@ -41,39 +43,39 @@ class TrainDataset(Dataset):
 
 
 def provider(cfg, phase):
-    # Think about saving this part into make_folds.py and just loading it here from cache
+
     df = pd.read_csv(cfg.train_rle_path)
-#     df = df.drop_duplicates('ImageId')
 
-    if cfg.sample_classes:
+    with open(cfg.train_folds, 'rb') as f:
+        folds_list = pickle.load(f)
 
-        df_with_mask = df[df["EncodedPixels"] != "-1"]
-        df_with_mask['has_mask'] = 1
-        df_without_mask = df[df["EncodedPixels"] == "-1"]
-        df_without_mask['has_mask'] = 0
-        df_without_mask_sampled = df_without_mask.sample(len(df_with_mask.drop_duplicates('ImageId')), random_state=cfg.seed)
+    train_idx, val_idx = folds_list[cfg.fold]
+    train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
+    df = train_df if phase == "train" else val_df
+    # n_fold=5 -> train/val : 80%/20%
 
-        if cfg.debug:
-            df = pd.concat([df_with_mask.head(cfg.debug//2),
-                            df_without_mask_sampled.head(cfg.debug//2)])
-            log('Debug mode: reding first %d records with class sampler' % df.shape[0])
-        else:
-            log(f'Using class sampler: with mask - {df_with_mask.shape[0]}, without mask - {df_without_mask_sampled.shape[0]}')
-            df = pd.concat([df_with_mask, df_without_mask_sampled])
+    if phase == 'train':
 
-    else:
-        df['has_mask'] = np.where(df["EncodedPixels"] != "-1", 1, 0)
+        if cfg.sample_classes:
+            df_with_mask = df[df["EncodedPixels"] != "-1"]
+            # df_with_mask['has_mask'] = 1
+            df_without_mask = df[df["EncodedPixels"] == "-1"]
+            # df_without_mask['has_mask'] = 0
+            df_without_mask_sampled = df_without_mask.sample(len(df_with_mask.drop_duplicates('ImageId')), random_state=cfg.seed)
+
+            if cfg.debug:
+                df = pd.concat([df_with_mask.head(cfg.debug//2),
+                                df_without_mask_sampled.head(cfg.debug//2)])
+                log('Debug mode: reding first %d records with class sampler' % df.shape[0])
+            else:
+                log(f'Using class sampler: with mask - {df_with_mask.shape[0]}, without mask - {df_without_mask_sampled.shape[0]}')
+                df = pd.concat([df_with_mask, df_without_mask_sampled])
+
+    elif phase == 'valid':
 
         if cfg.debug:
             df = df.head(cfg.debug)
             log('Debug mode: reading first %d records' % df.shape[0])
-
-    kfold = StratifiedKFold(cfg.n_fold, shuffle=True, random_state=cfg.seed)
-    train_idx, val_idx = list(kfold.split(
-        df["ImageId"], df["has_mask"]))[cfg.fold]
-    train_df, val_df = df.iloc[train_idx], df.iloc[val_idx]
-    df = train_df if phase == "train" else val_df
-    # n_fold=5 -> train/val : 80%/20%
 
     if phase == 'train':
         cfg_to_pass = cfg.data.train
@@ -85,35 +87,3 @@ def provider(cfg, phase):
 
     log(f'{phase} data: loaded {len(loader.dataset)} records')
     return loader
-
-
-# def get_transforms(phase, size, mean, std):
-#     list_transforms = []
-#     if phase == "train":
-#         list_transforms.extend(
-#             [
-#                 albu.HorizontalFlip(),
-#                 albu.OneOf([
-#                     albu.RandomContrast(),
-#                     albu.RandomGamma(),
-#                     albu.RandomBrightness(),
-#                     ], p=0.3),
-#                 albu.OneOf([
-#                     albu.ElasticTransform(alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03),
-#                     albu.GridDistortion(),
-#                     albu.OpticalDistortion(distort_limit=2, shift_limit=0.5),
-#                     ], p=0.3),
-#                 albu.ShiftScaleRotate(),
-#                 # GaussNoise(),
-#             ]
-#         )
-#     list_transforms.extend(
-#         [
-#             albu.Normalize(mean=mean, std=std, p=1),
-#             albu.Resize(size, size),
-#             ToTensor(),
-#         ]
-#     )
-
-#     list_trfms = albu.Compose(list_transforms)
-#     return list_trfms

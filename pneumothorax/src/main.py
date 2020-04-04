@@ -54,8 +54,6 @@ def main():
     log(f'Mode: {cfg.mode}')
     log(f'Workdir: {cfg.workdir}')
     log(f'Fold: {cfg.fold}')
-    log(f'Batch size: {cfg.batch_size}')
-    log(f'Gradient accumulation: {cfg.n_grad_acc}')
 
     util.set_seed(cfg.seed)
     torch.cuda.manual_seed(cfg.seed)
@@ -75,6 +73,8 @@ def main():
 
 def test(cfg, model):
     model.eval()
+
+    log(f'Batch size: {cfg.data.test.loader.batch_size}')
 
     df = pd.read_csv(cfg.data.test.sample_submission_file)
     if cfg.debug:
@@ -120,6 +120,9 @@ def test(cfg, model):
 
 
 def train(cfg, model):
+
+    log(f'Batch size: {cfg.batch_size}')
+    log(f'Gradient accumulation: {cfg.n_grad_acc}')
 
     criterion = factory.get_loss(cfg)
     optimizer = factory.get_optimizer(cfg, model.parameters())

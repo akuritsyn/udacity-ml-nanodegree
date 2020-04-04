@@ -1,16 +1,18 @@
 import albumentations as albu
 
-workdir = './model/model003'
+workdir = './model/model007'
 seed = 69
 
 n_fold = 5
-epochs = 20
-sample_classes = False
+epochs = 30
+sample_classes = True
 resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './predict/model_1024_0.pth'
+retrain_from = './model/model006/model_512_0.pth'
 
 train_rle_path = './input/stage_2_train.csv'
 train_imgdir = './input/1024-s2/train'
+# train_imgdir = './input/512-s2/train'
+train_folds = './cache/train_folds.pkl'
 
 batch_size = 4
 n_grad_acc = 4
@@ -25,7 +27,7 @@ model = dict(
 optim = dict(
     name='Adam',
     params=dict(
-        lr=1e-5,  # lr=5e-4
+        lr=5e-4,
     ),
 )
 
@@ -47,7 +49,7 @@ scheduler = dict(
 )
 
 prob_threshold = 0.5
-# min_object_size = 3500  # pixels
+min_object_size = 3500  # pixels
 
 normalize = {'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]}
 
@@ -105,7 +107,7 @@ data = dict(
         transforms=[resize, totensor],
     ),
     test=dict(
-        imgdir='./input/1024-s2/test',
+        imgdir='./input/512-s2/test',
         # sample_submission_file = './input/stage_2_sample_submission.csv',
         sample_submission_file='./predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
         trained_models=workdir+'/'+'model_1024_*.pth',

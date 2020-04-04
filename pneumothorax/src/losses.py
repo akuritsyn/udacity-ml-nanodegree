@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from . import lovasz_losses as L
 
 
 def dice_loss(input, target):
@@ -38,3 +39,14 @@ class MixedLoss(nn.Module):
     def forward(self, input, target):
         loss = self.alpha*self.focal(input, target) - torch.log(dice_loss(input, target))
         return loss.mean()
+
+
+# refer to
+# https://www.kaggle.com/c/tgs-salt-identification-challenge/discussion/69053#latest-563912
+class SymmetricLovaszLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(SymmetricLovaszLoss, self).__init__()
+
+    def forward(self, logits, targets):
+        return ((L.lovasz_hinge(logits, targets, per_image=True)) \
+                + (L.lovasz_hinge(-logits, 1-targets, per_image=True))) / 2

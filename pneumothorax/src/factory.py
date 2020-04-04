@@ -8,7 +8,8 @@ import albumentations as albu
 from albumentations.torch import ToTensor
 # from torchvision.transforms import ToTensor
 
-from .mixed_loss import MixedLoss
+from .losses import MixedLoss, SymmetricLovaszLoss
+
 from .utils.logger import log
 
 
@@ -46,6 +47,8 @@ def get_loss(cfg):
     if cfg.loss.name == 'MixedLoss':
         loss = MixedLoss(cfg.loss.params.alpha, cfg.loss.params.gamma)
         log(f'alpha: {cfg.loss.params.alpha}, gamma: {cfg.loss.params.gamma}')
+    elif cfg.loss.name == 'SymmetricLovaszLoss':
+        loss = SymmetricLovaszLoss()
     else:
         loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
 

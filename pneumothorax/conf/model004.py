@@ -4,18 +4,19 @@ workdir = './model/model004'
 seed = 69
 
 n_fold = 5
-epochs = 20
+epochs = 50
 sample_classes = True
 resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './model/model002/model_1024_0.pth'
+retrain_from = None  # './model/model002/model_1024_0.pth'
 
 train_rle_path = './input/stage_2_train.csv'
-train_imgdir = './input/1024-s2/train'
+#train_imgdir = './input/1024-s2/train'
+train_imgdir = './input/512-s2/train'
 
-batch_size = 4
-n_grad_acc = 4
+batch_size = 16
+n_grad_acc = 2
 num_workers = 4
-imgsize = 1024
+imgsize = 512
 
 model = dict(
     name='unet_resnet34',
@@ -25,7 +26,7 @@ model = dict(
 optim = dict(
     name='Adam',
     params=dict(
-        lr=1e-5,  # lr=5e-4
+        lr=5e-4,  # lr=5e-4
     ),
 )
 
@@ -104,16 +105,15 @@ data = dict(
             pin_memory=True,
         ),
         prob_threshold=prob_threshold,
-        min_object_size=min_object_size,
+        min_object_size=None,  # min_object_size,
         transforms=[resize, totensor],
         # transforms=[normalize_old, resize, totensor_old],
     ),
     test=dict(
-        normalize=normalize,
-        imgdir='./input/1024-s2/test',
+        imgdir='./input/512-s2/test',
         # sample_submission_file = './input/stage_2_sample_submission.csv',
         sample_submission_file='./predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
-        trained_models=workdir+'/'+'model_1024_*.pth',
+        trained_models=workdir+'/'+'model_512_*.pth',
         imgsize=imgsize,
         loader=dict(
             shuffle=False,
@@ -126,7 +126,7 @@ data = dict(
         transforms_and_hflip=[hflip1, resize, totensor],
         prob_threshold=0.55,
         min_object_size=3500,
-        output_file_probabilty_name='pixel_probabilities_1024.pkl',
+        output_file_probabilty_name='pixel_probabilities_512.pkl',
         submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th_FineTunedOnAllImages.csv',
     ),
 )
