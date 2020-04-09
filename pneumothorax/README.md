@@ -48,7 +48,7 @@ $ sh ./bin/train00[X].sh
 
 To train all the folds [0...4], change fold numbers inside .sh files and names of the pre-trained models in the corresponing config files located in `./conf`.
 
-All 3 steps for one fold probably take ~10.5 hours to train with a single 1080ti.
+All 3 steps for one fold probably take ~10.5 hours to train with a single 1080ti GPU.
 
 
 ## Inference
