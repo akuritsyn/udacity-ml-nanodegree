@@ -1,6 +1,6 @@
 model=model006
-gpu=1
-fold=1
+gpu=0
+fold=0  # 0...4
 conf=./conf/${model}.py
 #--debug 100
 

@@ -6,11 +6,10 @@ seed = 69
 n_fold = 5
 epochs = 20
 sample_classes = True
-resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = None  # './model/model004/model_512_4.pth'
+resume_from = None
+retrain_from = None
 
 train_rle_path = './input/stage_2_train.csv'
-# train_imgdir = './input/1024-s2/train'
 train_imgdir = './input/512-s2/train'
 train_folds = './cache/train_folds.pkl'
 
@@ -67,9 +66,6 @@ oneof_transform = dict(name='OneOf', args=[[
 
 shiftscalerotate = dict(name='ShiftScaleRotate', args=[], params=dict())
 
-# normalize_old = dict(name='Normalize', args=[], params=dict(mean=normalize['mean'], std=normalize['std'], p=1))
-# totensor_old = dict(name='ToTensor', args=[], params=dict())
-
 resize = dict(name='Resize', args=[], params=dict(height=imgsize, width=imgsize))
 totensor = dict(name='ToTensor', args=[], params=dict(normalize=normalize))
 
@@ -91,7 +87,7 @@ data = dict(
         ),
         prob_threshold=prob_threshold,
         min_object_size=None,
-        transforms=[hflip, oneof_contrast, oneof_transform, shiftscalerotate, resize, totensor] 
+        transforms=[hflip, oneof_contrast, oneof_transform, shiftscalerotate, resize, totensor]
     ),
     valid=dict(
         phase='valid',
@@ -108,12 +104,10 @@ data = dict(
         prob_threshold=prob_threshold,
         min_object_size=None,  # min_object_size,
         transforms=[resize, totensor],
-        # transforms=[normalize_old, resize, totensor_old],
     ),
     test=dict(
         imgdir='./input/512-s2/test',
-        # sample_submission_file = './input/stage_2_sample_submission.csv',
-        sample_submission_file='./predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
+        sample_submission_file='./input/stage_2_sample_submission.csv',
         trained_models=workdir+'/'+'model_512_*.pth',
         imgsize=imgsize,
         loader=dict(
@@ -125,9 +119,9 @@ data = dict(
         ),
         transforms=[resize, totensor],
         transforms_and_hflip=[hflip1, resize, totensor],
-        prob_threshold=0.55,
+        prob_threshold=0.5,
         min_object_size=3500,
         output_file_probabilty_name='pixel_probabilities_512.pkl',
-        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th_FineTunedOnAllImages.csv',
+        submission_file_name='submission_pytorch_5fold_ave_512_3500minpix.scv',
     ),
 )

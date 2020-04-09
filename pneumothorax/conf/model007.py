@@ -6,12 +6,11 @@ seed = 69
 n_fold = 5
 epochs = 30
 sample_classes = True
-resume_from = None  # './model/model001/model_1024_0.pth'
-retrain_from = './model/model006/model_512_0.pth'
+resume_from = None
+retrain_from = './model/model006/model_512_0.pth'  # <---- fold 0...4
 
 train_rle_path = './input/stage_2_train.csv'
 train_imgdir = './input/1024-s2/train'
-# train_imgdir = './input/512-s2/train'
 train_folds = './cache/train_folds.pkl'
 
 batch_size = 4
@@ -88,7 +87,7 @@ data = dict(
         ),
         prob_threshold=prob_threshold,
         min_object_size=None,
-        transforms=[hflip, oneof_contrast, oneof_transform, shiftscalerotate, resize, totensor] 
+        transforms=[hflip, oneof_contrast, oneof_transform, shiftscalerotate, resize, totensor]
     ),
     valid=dict(
         phase='valid',
@@ -107,9 +106,8 @@ data = dict(
         transforms=[resize, totensor],
     ),
     test=dict(
-        imgdir='./input/512-s2/test',
-        # sample_submission_file = './input/stage_2_sample_submission.csv',
-        sample_submission_file='./predict/submission_pytorch_5fold_ave_Wflip_0p55th.csv',
+        imgdir='./input/1024-s2/test',
+        sample_submission_file='./input/stage_2_sample_submission.csv',
         trained_models=workdir+'/'+'model_1024_*.pth',
         imgsize=imgsize,
         loader=dict(
@@ -121,9 +119,9 @@ data = dict(
         ),
         transforms=[resize, totensor],
         transforms_and_hflip=[hflip1, resize, totensor],
-        prob_threshold=0.55,
+        prob_threshold=0.5,
         min_object_size=3500,
         output_file_probabilty_name='pixel_probabilities_1024.pkl',
-        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p55th_FineTunedOnAllImages.csv',
+        submission_file_name='submission_pytorch_5fold_ave_Wflip_0p5th_TrainedAllOnValDice.csv',
     ),
 )

@@ -44,7 +44,7 @@ def get_dataloader_test(cfg, df, hflip=False):
 
 def get_pixel_probabilities(cfg, model, testset, hflip=False):
     pixel_probabilities = []
-    imgsize = cfg.data.test.imgsize
+    imgsize = 1024  # cfg.data.test.imgsize
     trained_models = glob.glob(cfg.data.test.trained_models)
     log(f'Making predictions on test images using the following models: {trained_models}')
     assert len(trained_models) == cfg.n_fold
@@ -52,20 +52,23 @@ def get_pixel_probabilities(cfg, model, testset, hflip=False):
     for batch in tqdm(testset):
 
         for j in range(cfg.n_fold):
-            model_checkpoint = torch.load(trained_models[j], map_location=lambda storage, loc: storage)
+            model_checkpoint = torch.load(trained_models[j],
+                                          map_location=lambda storage,
+                                          loc: storage)
             model.load_state_dict(model_checkpoint["state_dict"])
-            # model.cuda()
             if j == 0:
                 predictions_ave = torch.sigmoid(model(batch.cuda()))
             else:
-                predictions_ave += torch.sigmoid(model(batch.cuda()))  # to(device)
-            # model.cpu()
-        predictions_ave = predictions_ave / cfg.n_fold
+                predictions_ave += torch.sigmoid(model(batch.cuda()))
 
-        predictions_ave = predictions_ave.detach().cpu().numpy()[:, 0, :, :]  # (batch_size, 1, size, size) -> (batch_size, size, size)
+        predictions_ave = predictions_ave / cfg.n_fold
+        # (batch_size, 1, size, size) -> (batch_size, size, size)
+        predictions_ave = predictions_ave.detach().cpu().numpy()[:, 0, :, :]
+
         for probability in predictions_ave:
             if probability.shape != (imgsize, imgsize):
-                probability = cv2.resize(probability, dsize=(imgsize, imgsize), interpolation=cv2.INTER_LINEAR)
+                probability = cv2.resize(probability, dsize=(imgsize, imgsize),
+                                         interpolation=cv2.INTER_LINEAR)
             if hflip:
                 pixel_probabilities.append(np.fliplr(probability))
             else:
@@ -74,7 +77,8 @@ def get_pixel_probabilities(cfg, model, testset, hflip=False):
     return pixel_probabilities
 
 
-def post_process(probability, prob_threshold=0.5, min_object_size=3500, imgsize=1024):
+def post_process(probability, prob_threshold=0.5, min_object_size=3500,
+                 imgsize=1024):
     mask = cv2.threshold(probability, prob_threshold, 1, cv2.THRESH_BINARY)[1]
     num_component, component = cv2.connectedComponents(mask.astype(np.uint8))
     predictions = np.zeros((imgsize, imgsize), np.float32)

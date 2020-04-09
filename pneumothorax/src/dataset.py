@@ -72,7 +72,7 @@ def provider(cfg, phase):
                 df = pd.concat([df_with_mask, df_without_mask_sampled])
 
     elif phase == 'valid':
-
+        # df = df.drop_duplicates('ImageId')
         if cfg.debug:
             df = df.head(cfg.debug)
             log('Debug mode: reading first %d records' % df.shape[0])

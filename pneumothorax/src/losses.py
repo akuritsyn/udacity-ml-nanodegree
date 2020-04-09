@@ -41,6 +41,27 @@ class MixedLoss(nn.Module):
         return loss.mean()
 
 
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.smooth = 1.0
+
+    def forward(self, input, target):
+        intersection = 2.0 * ((target * input).sum()) + self.smooth
+        union = target.sum() + input.sum() + self.smooth
+        return 1 - (intersection / union)
+
+
+class BCEDiceLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.diceloss = DiceLoss()
+        self.bceloss = nn.BCELoss()
+
+    def forward(self, input, target):
+        input = torch.sigmoid(input)
+        return self.bceloss(input, target) + self.diceloss(input, target)
+
 # refer to
 # https://www.kaggle.com/c/tgs-salt-identification-challenge/discussion/69053#latest-563912
 class SymmetricLovaszLoss(nn.Module):
@@ -48,5 +69,5 @@ class SymmetricLovaszLoss(nn.Module):
         super(SymmetricLovaszLoss, self).__init__()
 
     def forward(self, logits, targets):
-        return ((L.lovasz_hinge(logits, targets, per_image=True)) \
-                + (L.lovasz_hinge(-logits, 1-targets, per_image=True))) / 2
+        return ((L.lovasz_hinge(logits, targets, per_image=True)) +
+                (L.lovasz_hinge(-logits, 1-targets, per_image=True))) / 2

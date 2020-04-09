@@ -6,10 +6,8 @@ from torch.optim import lr_scheduler
 import segmentation_models_pytorch as smp
 import albumentations as albu
 from albumentations.torch import ToTensor
-# from torchvision.transforms import ToTensor
 
-from .losses import MixedLoss, SymmetricLovaszLoss
-
+from .losses import MixedLoss, SymmetricLovaszLoss, BCEDiceLoss
 from .utils.logger import log
 
 
@@ -49,6 +47,8 @@ def get_loss(cfg):
         log(f'alpha: {cfg.loss.params.alpha}, gamma: {cfg.loss.params.gamma}')
     elif cfg.loss.name == 'SymmetricLovaszLoss':
         loss = SymmetricLovaszLoss()
+    elif cfg.loss.name == 'BCEDiceLoss':
+        loss = BCEDiceLoss()
     else:
         loss = getattr(nn, cfg.loss.name)(**cfg.loss.params)
 
