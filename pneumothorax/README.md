@@ -17,7 +17,7 @@ www.kaggle.com/c/siim-acr-pneumothorax-segmentation) hosted on Kaggle in 2019.
 
 ## Preparation
 
-Please put `./input` directory in the root level and unzip the files downloaded from kaggle there (
+Please put `./input` directory in the root level and unzip the files downloaded from Kaggle there (
 [512x512](https://www.kaggle.com/iafoss/siimacr-pneumothorax-segmentation-data-512),
 [1024x1024](https://www.kaggle.com/iafoss/siimacr-pneumothorax-segmentation-data-1024),
 [Annotations](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation/data)
@@ -56,7 +56,7 @@ All 3 steps for one fold probably take ~10.5 hours to train with a single 1080ti
 ~~~
 $ sh ./bin/test00[X].sh
 ~~~
-[predict008.sh](https://github.com/akuritsyn/udacity-ml-nanodegree/blob/master/pneumothorax/bin/test008.sh) does the predictions for the final model.
+[test008.sh](https://github.com/akuritsyn/udacity-ml-nanodegree/blob/master/pneumothorax/bin/test008.sh) does the predictions for the final model.
 
 You can [upload the result to Kaggle](https://www.kaggle.com/c/siim-acr-pneumothorax-segmentation/submissions) for scoring either manually or do it through a Kaggle API (registered account is required):
 ~~~
