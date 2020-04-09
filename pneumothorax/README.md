@@ -1,4 +1,4 @@
-# Kaggle - Pneumothorax Segmentation in Chest X-ray Images
+# Pneumothorax Segmentation in Chest X-ray Images
 
 This is the Capstone Project for Udacity Machine Learning Engineer Nanodegree based on 
 [Pneumothorax Segmentation in Chest X-ray Images](
@@ -46,7 +46,7 @@ $ sh ./bin/train00[X].sh
 - [train007.sh](https://github.com/akuritsyn/udacity-ml-nanodegree/blob/master/pneumothorax/bin/train007.sh) upscales previous model to 1024x1024 images using Focal+Dice loss. 
 - [train008.sh](https://github.com/akuritsyn/udacity-ml-nanodegree/blob/master/pneumothorax/bin/train008.sh) upscales previous model to 1024x1024 images using BCE+Dice loss.
 
-Change fold numbers inside .sh files and names of the pre-trained models in the corresponing config files.
+To train all the folds [0...4], change fold numbers inside .sh files and names of the pre-trained models in the corresponing config files located in './conf'.
 
 All 3 steps for one fold probably take ~10.5 hours to train with a single 1080ti.
 
